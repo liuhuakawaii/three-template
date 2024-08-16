@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Scene</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #scene-container {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="scene-container"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/"
+      }
+    }
+    </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import BaseScene from './BaseScene.js';
+    import UI2DInteraction from './UI2DInteraction.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // 使用示例
+    const container = document.getElementById('scene-container');
+    const baseScene = new BaseScene(container);
+    const ui2D = new UI2DInteraction(baseScene);
+    baseScene.render = function () {
+      requestAnimationFrame(this.render.bind(this));
+      this.controls.update();
+      this.renderer.render(this.scene, this.camera);
+      ui2D.update();
+    };
+
+
+    baseScene.render();
+    baseScene.loadModelByPath('./assets/model.glb', () => {
+      baseScene.traverseScene(ui2D);
+    });
+
+  </script>
+</body>
+
+</html>
