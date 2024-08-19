@@ -13,6 +13,9 @@ export default class MouseInteraction {
     this.onDblClickCallback = null;
     this.onHoverCallback = null;
 
+    this.lastClickTime = 0;
+    this.doubleClickTimeout = 300; // 双击的最长时间间隔（毫秒）
+
     this.init();
   }
 
@@ -22,7 +25,7 @@ export default class MouseInteraction {
 
   addEventListeners() {
     const canvas = this.baseScene.renderer.domElement;
-    canvas.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+    canvas.addEventListener('mousemove', this.onMouseMove.bind(this), false); //false 表示事件处理程序不会阻止事件的默认行为
     canvas.addEventListener('click', this.onClick.bind(this), false);
     canvas.addEventListener('dblclick', this.onDblClick.bind(this), false);
   }
@@ -47,8 +50,14 @@ export default class MouseInteraction {
 
   onClick(event) {
     event.preventDefault();
-    this.checkIntersection();
+    const currentTime = Date.now();
+    if (currentTime - this.lastClickTime < this.doubleClickTimeout) {
+      // 如果在短时间内发生两次点击，则认为是双击
+      return;
+    }
 
+    this.lastClickTime = currentTime;
+    this.checkIntersection();
     if (this.intersects.length > 0) {
       this.selectedObject = this.intersects[0].object;
       if (this.onClickCallback) this.onClickCallback(this.selectedObject);
@@ -104,5 +113,12 @@ export default class MouseInteraction {
 
   update() {
     // 在这里可以添加需要在每一帧更新的逻辑
+  }
+
+  destroy() {
+    const canvas = this.baseScene.renderer.domElement;
+    canvas.removeEventListener('mousemove', this.onMouseMove);
+    canvas.removeEventListener('click', this.onClick);
+    canvas.removeEventListener('dblclick', this.onDblClick);
   }
 }

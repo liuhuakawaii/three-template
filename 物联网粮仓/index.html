@@ -23,7 +23,36 @@
 
 <body>
   <div id="scene-container"></div>
+  <div id="messageTag"
+    style="visibility:hidden;width:500px;height:400px;position: absolute;color: #fff;z-index: 2;font-size: 16px;">
+    <div style="position:relative;">
+      <div style="position: absolute;left: 0px;top: 0px;">
+        <img src="./assets/信息背景.png" alt="" style="width:400px;opacity: 1.0;">
+      </div>
+      <div id="granaryName" style="position:absolute;left:25px;top:40px;font-size:16px">平房仓 P_01</div>
+      <div style="position:absolute;left:290px;top:25px">
+        <img src="./assets/温度.png" alt="" style="width:50px;">
+      </div>
 
+      <div style="position:absolute;left:330px;top:40px">
+        <span id="temperature">19</span>℃
+      </div>
+      <div id="grain" style="position:absolute;left:170px;top:50px">
+        <span id="grain">红豆</span>(吨)
+      </div>
+      <div style="position:absolute;left:80px;top:85px;font-size:60px;color:#00ffff;vertical-align:middle">
+        <img id="grainImg" src="./assets/豆子/红豆.png" alt="" style="width:60px;">
+      </div>
+      <div style="position:absolute;left:155px;top:80px;font-size:60px;color:#00ffff;vertical-align:middle">
+        <span id="weight">3600</span>t
+      </div>
+      <div style="position:absolute;left:70px;top:170px;padding:8px 25px;border-radius:30px;border:1px solid #00ffff;">
+        仓高—<span id="granaryHeight">12</span>m</div>
+      <div style="position:absolute;left:225px;top:170px;padding:8px 25px;">
+        粮高— <span id="grainHeight">5</span> m
+      </div>
+    </div>
+  </div>
   <script type="importmap">
     {
       "imports": {
@@ -39,32 +68,71 @@
     import UI2DInteraction from './UI2DInteraction.js';
     import MouseInteraction from './MouseInteraction.js';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
+    import messageData from './messageData.js';
     // 使用示例
     const container = document.getElementById('scene-container');
     const baseScene = new BaseScene(container);
     const ui2D = new UI2DInteraction(baseScene);
     const mouseInteraction = new MouseInteraction(baseScene);
+    const idArr = ['granaryName', 'temperature', 'grain', 'grainImg', 'weight', 'granaryHeight', 'grainHeight']
+
+
+
+
     baseScene.render = function () {
       requestAnimationFrame(this.render.bind(this));
       this.controls.update();
-      this.renderer.render(this.scene, this.camera);
       ui2D.update();
       mouseInteraction.update();
+      this.renderer.render(this.scene, this.camera);
     };
+
+
+    // 播放动画
+
+    const messageTag = ui2D.createLabelById('messageTag');
+    baseScene.scene.add(messageTag);
 
     // 设置鼠标交互回调
     mouseInteraction.setOnClickCallback((object) => {
       if (object) {
-        console.log('Clicked object:', object.name);
-        // 在这里可以添加点击对象后的操作
+        if (mouseInteraction.selectedObject) {
+          console.log('Clicked object:', mouseInteraction.selectedObject);
+          if (!messageData[mouseInteraction.selectedObject.name] || !mouseInteraction.selectedObject.name) {
+            messageTag.element.style.visibility = 'hidden';
+          }
+          idArr.forEach(function (id) {
+            var dom = document.getElementById(id);
+            dom.innerHTML = messageData[mouseInteraction.selectedObject.name][id];
+          })
+          messageTag.element.style.visibility = 'visible';
+          messageTag.position.copy(mouseInteraction.selectedObject.position);
+
+          //数字滚动动画
+          var weightDom = document.getElementById('weight');
+          weightDom.innerHTML = 0
+          var weightMax = messageData[mouseInteraction.selectedObject.name]['weight']
+          var weight = 0
+          var interval = setInterval(function () {
+            if (weight < weightMax) {
+              weight += Math.floor(weightMax / 50)
+              document.getElementById('weight').innerHTML = weight
+            } else {
+              clearInterval(interval)
+            }
+          }, 5)
+        }
+
       }
     });
 
     mouseInteraction.setOnDblClickCallback((object) => {
       if (object) {
         console.log('Double-clicked object:', object.name);
-        // 在这里可以添加双击对象后的操作
+        if (['P_01', 'P_02', 'P_03', 'P_04', 'P_05', 'P_06', 'P_07', 'P_08', 'P_09', 'P_10', 'P_11', 'P_12', 'P_13', 'P_14', 'P_15', 'P_16', 'P_17', 'P_18', 'P_19'].includes(object.name)) {
+          const pos = object.position.clone()
+          baseScene.addFlame(pos)
+        }
       }
     });
 

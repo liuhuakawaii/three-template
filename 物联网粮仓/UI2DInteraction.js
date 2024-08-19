@@ -52,6 +52,16 @@ export default class UI2DInteraction {
     this.baseScene.scene.add(label);
   }
 
+  createLabelById(domId) {
+    const dom = document.getElementById(domId);
+    if (dom) {
+      const label = new CSS2DObject(dom);
+      dom.style.pointerEvents = 'none';
+      return label
+    }
+
+  }
+
   update() {
     this.labelRenderer.render(this.baseScene.scene, this.baseScene.camera);
   }

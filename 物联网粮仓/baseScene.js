@@ -7,7 +7,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
+import { createFlame } from './flame.js';
 export default class BaseScene {
   constructor(container) {
     this.container = container;
@@ -24,6 +24,10 @@ export default class BaseScene {
       'stl': new STLLoader(),
       'ply': new PLYLoader(),
     }
+    this.animation = null
+    this.textureLoader = new THREE.TextureLoader();
+    this.sequenceAnimations = [];
+
     this.init();
   }
 
@@ -79,6 +83,14 @@ export default class BaseScene {
     this.scene.fog = new THREE.Fog(color, near, far);
   }
 
+  addFlame(pos) {
+    console.log(pos, 'pos');
+    const flame = createFlame()
+    this.scene.add(flame)
+    flame.position.copy(pos)
+    flame.position.y += 10;
+  }
+
   addEventListeners() {
     window.addEventListener('resize', this.onWindowResize.bind(this), false);
   }
@@ -92,6 +104,8 @@ export default class BaseScene {
   render() {
     requestAnimationFrame(this.render.bind(this));
     this.controls.update();
+    this.updateSequenceAnimations();
+    // this.animation.UpdateLoop()
     this.renderer.render(this.scene, this.camera);
   }
 
