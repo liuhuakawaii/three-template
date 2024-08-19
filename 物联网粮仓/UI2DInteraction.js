@@ -17,9 +17,12 @@ export default class UI2DInteraction {
   createLabelRenderer() {
     this.labelRenderer = new CSS2DRenderer();
     this.labelRenderer.setSize(this.baseScene.container.clientWidth, this.baseScene.container.clientHeight);
-    this.labelRenderer.domElement.style.position = 'absolute';
-    this.labelRenderer.domElement.style.top = '0px';
-    this.labelRenderer.domElement.style.pointerEvents = 'none';
+    this.labelRenderer.domElement.style = `
+      position: absolute;
+      left: 0;
+      top: 0;
+      pointer-events: none;
+    `
     this.baseScene.container.appendChild(this.labelRenderer.domElement);
   }
 
@@ -35,13 +38,16 @@ export default class UI2DInteraction {
     const div = document.createElement('div');
     div.className = 'label';
     div.textContent = text;
-    div.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-    div.style.padding = '2px 5px';
-    div.style.borderRadius = '3px';
-
+    div.style = `
+      background-color: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      font-size: 12px;
+      padding: 3px 5px;
+      border-radius: 8px;
+    `
     const label = new CSS2DObject(div);
     label.position.copy(position);
-
+    label.position.y += 20
     this.labels.push(label);
     this.baseScene.scene.add(label);
   }

@@ -169,7 +169,8 @@ export default class BaseScene {
   }
 
   traverseScene(ui2D) {
-    this.originMesh.traverse((object) => {
+    const group = this.scene.getObjectByName('粮仓')
+    group.traverse((object) => {
       if (object.isMesh) {
         const pos = object.getWorldPosition(new THREE.Vector3())
         ui2D.createLabel(object.name, pos)
