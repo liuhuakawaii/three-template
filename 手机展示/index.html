@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Scene</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #scene-container {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #color {
+      width: 314px;
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%);
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      align-items: center;
+      /* top: 30px; */
+      bottom: 12px;
+      /* background:rgba(255,255,255,0.1); */
+    }
+
+    #camera {
+      position: absolute;
+      display: flex;
+      /* row是flex-direction默认值,可以不设置，表示主轴为水平方向，从左向右排列*/
+      flex-direction: row;
+      /*space-between表示*/
+      justify-content: space-between;
+      /* visibility: hidden; */
+      backface-visibility: hidden;
+    }
+
+    #message {
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 0px;
+      /* 边框 */
+      background: linear-gradient(#00ffff, #00ffff) left top,
+        linear-gradient(#00ffff, #00ffff) left top,
+        linear-gradient(#00ffff, #00ffff) right bottom,
+        linear-gradient(#00ffff, #00ffff) right bottom;
+      background-repeat: no-repeat;
+      background-size: 2px 20px, 36px 2px;
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-size: 18px;
+      padding: 8px 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="scene-container"></div>
+  <div id="color">
+    <!-- 四个按钮 -->
+    <div class="colorChoose" id="map1"><img src="./assets/1.png"></div>
+    <div class="colorChoose" id="map2"><img src="./assets/2.png"></div>
+    <div class="colorChoose" id="map3"><img src="./assets/3.png"></div>
+    <div class="colorChoose" id="map4"><img src="./assets/4.png"></div>
+  </div>
+  <div id="camera" style="visibility: hidden;">
+    <div>
+      <div style="height:1px;width:130px;background: #00ffff;margin-top:68px"></div>
+    </div>
+    <div id="message" style="width:350px;height:120px;">
+      <div style="padding: 10px 4px;font-size:18px;">双摄像头</div>
+      <div style="padding: 10px 24px;font-size:16px;">后置主摄像头——1300万像素(F/1.8光圈)</div>
+      <div style="padding: 10px 24px;font-size:16px;">后置副摄像头——200万像素的</div>
+    </div>
+    <!-- 设置一个关闭按钮 -->
+    <div style="position:relative;">
+      <div style="position: absolute;left: -30px;top: 10px;">
+        <img id="close" src="./assets/关闭.png" alt="" width="18" style="cursor: pointer;">
+      </div>
+    </div>
+  </div>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.148/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.148/examples/jsm/"
+      }
+    }
+    </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import BaseScene from './BaseScene.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import UI3DInteraction from './UI3DInteraction.js';
+    import MouseInteraction from './MouseInteraction.js';
+    import { FontLoader } from 'three/addons/loaders/FontLoader.js'; // 导入 FontLoader
+    // 使用示例
+    const container = document.getElementById('scene-container')
+    const baseScene = new BaseScene(container);
+
+    const ui2D = new UI3DInteraction(baseScene);
+    const mouseInteraction = new MouseInteraction(baseScene);
+
+    baseScene.render = function () {
+      this.scene.rotateY(0.01)
+      requestAnimationFrame(this.render.bind(this));
+      ui2D.update();
+      this.controls.update();
+      mouseInteraction.update();
+      this.renderer.render(this.scene, this.camera);
+    };
+
+    baseScene.render();
+    const textureCube = new THREE.CubeTextureLoader()
+      .setPath('./assets/envMap/')
+      .load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg']);
+    baseScene.loadModelByPath('./assets/手机.glb', () => {
+      const mesh = baseScene.scene.getObjectByName('手机');
+      const textLoader = new THREE.TextureLoader();
+      mesh.material = new THREE.MeshPhysicalMaterial({
+        metalness: 1.0,
+        roughness: 1.0,
+        map: textLoader.load('./assets/basecolor.png'),
+        roughnessMap: textLoader.load('./assets/roughness.png'),
+        metalnessMap: textLoader.load('./assets/metallic.png'),
+        normalMap: textLoader.load('./assets/normal.png'),
+        alphaMap: textLoader.load('./assets/opacity.png'),
+        transparent: true,
+        envMap: textureCube,
+        envMapIntensity: 0.9
+      });
+      mesh.material.map.flipY = false;
+      mesh.material.roughnessMap.flipY = false;
+      mesh.material.metalnessMap.flipY = false;
+      mesh.material.normalMap.flipY = false;
+      mesh.material.alphaMap.flipY = false;
+      console.log(baseScene.scene);
+      CreateMapSelector()
+
+      const frontObject3D = baseScene.scene.getObjectByName('后置摄像头位置');
+      const sprite = CreatePointsTag(frontObject3D)
+      sprite.position.x -= 6;//向右侧稍微偏移，不要叠加在相机上
+      sprite.position.z -= 3;//根据sprite大小平移，避免任意观察角度精灵插入到相机内
+      mesh.renderOrder = 0;  //确保精灵在物体上显示 避免半透明叠加问题
+      sprite.renderOrder = 1;
+      baseScene.scene.add(CircleLine())
+      baseScene.scene.add(sprite);
+
+      var s = 0.0
+      function waveAnimation() {
+        s += 0.01
+        if (s < 0.5) {
+          sprite.scale.x = 6 * (1 + s)
+          sprite.scale.y = 6 * (1 + s)
+        } else if (s >= 0.5 && s < 1.0) {
+          sprite.scale.x = 6 * (2 - s)
+          sprite.scale.y = 6 * (2 - s)
+        } else {
+          s = 0.0
+        }
+        requestAnimationFrame(waveAnimation)
+      }
+      waveAnimation()
+
+      const messageTag = ui2D.createLabelById('camera', sprite.position);
+      // messageTag.element.style.left = '252px'
+      messageTag.element.style.top = '0px'
+      messageTag.element.style.visibility = 'visible'
+      messageTag.scale.set(0.22, 0.22, 1.0)
+      messageTag.position.x += -504 * 0.22 / 2
+      messageTag.rotateY(Math.PI)
+      baseScene.scene.add(messageTag);
+      var close = document.getElementById('close');
+      // 点击关闭按钮隐藏HTML元素标签
+      close.addEventListener('click', function () {
+        labelRenderer.domElement.style.display = "none";
+        console.log(233)
+      })
+
+      AddMouseEventer()
+    });
+
+
+
+    function AddMouseEventer() {
+      mouseInteraction.setOnClickCallback((object) => {
+        if (object) {
+          console.log('Hovering over object:', object.name);
+
+        }
+      });
+
+      mouseInteraction.setOnDblClickCallback((object) => {
+        if (object) {
+          console.log('Double-clicked object:', object.name);
+
+        }
+      });
+
+      mouseInteraction.setOnHoverCallback((object) => {
+        if (object) {
+          // console.log('Hovering over object:', object.name);
+          // 在这里可以添加悬停在对象上时的操作
+        }
+      });
+
+    }
+
+    function CircleLine() {
+      const geometry = new THREE.BufferGeometry()
+      const R = 60
+      const arc = new THREE.ArcCurve(0, 0, R, Math.PI / 2 + Math.PI / 6, Math.PI / 2 - Math.PI / 6)
+      const points = arc.getPoints(100)
+      geometry.setFromPoints(points)
+      const material = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.5
+      })
+      const line = new THREE.Line(geometry, material)
+      line.rotateX(Math.PI / 2)
+      const circleLine = new THREE.Group()
+      circleLine.position.y -= 80
+      circleLine.add(line)
+
+      const fontLoader = new FontLoader()
+      fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.132.2/examples/fonts/helvetiker_bold.typeface.json', (font) => {
+        const material = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          side: THREE.DoubleSide
+        })
+        const Shapes = font.generateShapes('720°', 10)
+        const geometry = new THREE.ShapeGeometry(Shapes)
+        const text = new THREE.Mesh(geometry, material)
+        text.position.z = R
+        text.position.x = -12;
+        circleLine.add(text)
+      })
+
+      return circleLine
+    }
+
+    function CreateMapSelector(params) {
+      const textLoader = new THREE.TextureLoader();
+
+      const map1 = textLoader.load("./assets/幻夜黑.png");
+      map1.flipY = false;
+      const map2 = textLoader.load("./assets/极光紫.png");
+      map2.flipY = false;
+      const map3 = textLoader.load("./assets/极光蓝.png");
+      map3.flipY = false;
+      const map4 = textLoader.load("./assets/珊瑚红.png");
+      map4.flipY = false;
+
+      const map1Id = document.getElementById('map1');
+      const map2Id = document.getElementById('map2');
+      const map3Id = document.getElementById('map3');
+      const map4Id = document.getElementById('map4');
+
+      map1Id.addEventListener('click', function () {
+        const mesh = baseScene.scene.getObjectByName('手机');
+        mesh.material.map = map1;
+      })
+
+      map2Id.addEventListener('click', function () {
+        const mesh = baseScene.scene.getObjectByName('手机');
+        mesh.material.map = map2;
+      })
+
+      map3Id.addEventListener('click', function () {
+        const mesh = baseScene.scene.getObjectByName('手机');
+        mesh.material.map = map3;
+      })
+      map4Id.addEventListener('click', function () {
+        const mesh = baseScene.scene.getObjectByName('手机');
+        mesh.material.map = map4;
+      })
+    }
+
+    function CreatePointsTag(obj) {
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: new THREE.TextureLoader().load('./assets/光点.png'),
+        transparent: true
+      })
+      const sprite = new THREE.Sprite(spriteMaterial)
+      sprite.scale.set(6, 6, 1)
+      const pos = new THREE.Vector3()
+      obj.getWorldPosition(pos)
+      sprite.position.copy(pos)
+      return sprite
+    }
+
+
+
+  </script>
+</body>
+
+</html>
