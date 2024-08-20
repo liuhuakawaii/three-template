@@ -57,7 +57,7 @@ export default class MouseInteraction {
     }
 
     this.lastClickTime = currentTime;
-    this.checkIntersection(false);
+    this.checkIntersection(true);
     if (this.intersects.length > 0) {
       this.selectedObject = this.intersects[0].object;
       if (this.onClickCallback) this.onClickCallback(this.selectedObject);

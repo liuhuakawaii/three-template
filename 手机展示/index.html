@@ -82,9 +82,9 @@
       <div style="padding: 10px 24px;font-size:16px;">后置副摄像头——200万像素的</div>
     </div>
     <!-- 设置一个关闭按钮 -->
-    <div style="position:relative;">
-      <div style="position: absolute;left: -30px;top: 10px;">
-        <img id="close" src="./assets/关闭.png" alt="" width="18" style="cursor: pointer;">
+    <div id="close" style="position:relative;">
+      <div style="position: absolute;left: -30px;top: 10px; z-index: 1;">
+        <img src="./assets/关闭.png" alt="" width="18" style="cursor: pointer;">
       </div>
     </div>
   </div>
@@ -112,7 +112,7 @@
     const mouseInteraction = new MouseInteraction(baseScene);
 
     baseScene.render = function () {
-      this.scene.rotateY(0.01)
+      // this.scene.rotateY(0.01)
       requestAnimationFrame(this.render.bind(this));
       ui2D.update();
       this.controls.update();
@@ -175,18 +175,18 @@
       const messageTag = ui2D.createLabelById('camera', sprite.position);
       // messageTag.element.style.left = '252px'
       messageTag.element.style.top = '0px'
-      messageTag.element.style.visibility = 'visible'
+      messageTag.element.style.visibility = 'hidden'
       messageTag.scale.set(0.22, 0.22, 1.0)
       messageTag.position.x += -504 * 0.22 / 2
       messageTag.rotateY(Math.PI)
       baseScene.scene.add(messageTag);
+
       var close = document.getElementById('close');
       // 点击关闭按钮隐藏HTML元素标签
-      close.addEventListener('click', function () {
-        labelRenderer.domElement.style.display = "none";
-        console.log(233)
+      close.addEventListener('click', () => {
+        messageTag.element.style.visibility = "hidden";
+        messageTag.element.style.pointerEvents = "none";
       })
-
       AddMouseEventer()
     });
 
@@ -195,14 +195,17 @@
     function AddMouseEventer() {
       mouseInteraction.setOnClickCallback((object) => {
         if (object) {
-          console.log('Hovering over object:', object.name);
+          if (object.isSprite) {
+            baseScene.scene.children[6].element.style.visibility = "visible";
+            baseScene.scene.children[6].element.style.pointerEvents = "all";
+          }
 
         }
       });
 
       mouseInteraction.setOnDblClickCallback((object) => {
         if (object) {
-          console.log('Double-clicked object:', object.name);
+          console.log('Double-clicked object:', object);
 
         }
       });
