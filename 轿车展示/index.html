@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Scene</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #scene-container {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #color {
+      width: 314px;
+      position: absolute;
+      left: 50%;
+      transform: translate(-50%);
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      align-items: center;
+      /* top: 30px; */
+      bottom: 12px;
+      /* background:rgba(255,255,255,0.1); */
+    }
+
+    #camera {
+      position: absolute;
+      display: flex;
+      /* row是flex-direction默认值,可以不设置，表示主轴为水平方向，从左向右排列*/
+      flex-direction: row;
+      /*space-between表示*/
+      justify-content: space-between;
+      /* visibility: hidden; */
+      backface-visibility: hidden;
+    }
+
+    #message {
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 0px;
+      /* 边框 */
+      background: linear-gradient(#00ffff, #00ffff) left top,
+        linear-gradient(#00ffff, #00ffff) left top,
+        linear-gradient(#00ffff, #00ffff) right bottom,
+        linear-gradient(#00ffff, #00ffff) right bottom;
+      background-repeat: no-repeat;
+      background-size: 2px 20px, 36px 2px;
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-size: 18px;
+      padding: 8px 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="scene-container"></div>
+  <div id="color" style="">
+    <div class="colorChoose" id="color1"><img src="./assets/绿.jpg"></div>
+    <div class="colorChoose" id="color2"><img src="./assets/灰.jpg"></div>
+    <div class="colorChoose" id="color3"><img src="./assets/红.jpg"></div>
+    <div class="colorChoose" id="color4"><img src="./assets/黑.jpg"></div>
+    <div class="colorChoose" id="color5"><img src="./assets/白.jpg"></div>
+  </div>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.148/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.148/examples/jsm/"
+      }
+    }
+    </script>
+  <script src="./tween.umd.js"></script>
+  <script type="module">
+    import * as THREE from 'three';
+    import BaseScene from './BaseScene.js';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import UI3DInteraction from './UI3DInteraction.js';
+    import MouseInteraction from './MouseInteraction.js';
+
+
+    const container = document.getElementById('scene-container')
+    const baseScene = new BaseScene(container);
+
+    const ui2D = new UI3DInteraction(baseScene);
+    const mouseInteraction = new MouseInteraction(baseScene);
+
+    baseScene.render = function () {
+      requestAnimationFrame(this.render.bind(this));
+      ui2D.update();
+      TWEEN.update();
+      this.controls.update();
+      mouseInteraction.update();
+      this.renderer.render(this.scene, this.camera);
+    };
+
+    const textureCube = new THREE.CubeTextureLoader()
+      .setPath('./assets/envMap/')
+      .load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg',]);
+
+    const normalMap = new THREE.TextureLoader().load('./assets/Tyre_Normal.png');
+
+    baseScene.loadModelByPath('./assets/轿车.glb', () => {
+      //1.设置环境贴图方法一
+      // baseScene.scene.traverse((object) => {
+      //   if (object.isMesh) {
+      //     object.material.envMap = textureCube;
+      //     object.material.needsUpdate = true;
+      //   }
+      // });
+
+      // 2.设置环境贴图方法二
+      baseScene.scene.environment = textureCube;
+
+      baseScene.scene.traverse((object) => {
+        if (object.isMesh) {
+          if (object.name.slice(0, 4) == "高光金属") {
+            object.material = new THREE.MeshStandardMaterial({
+              color: object.material.color, //读取材质原来的颜色
+              metalness: 1.0,
+              roughness: 0.2,
+              //   envMapIntensity控制环境贴图的影响
+              envMapIntensity: 1.0,
+            })
+          } else if (object.name.slice(0, 2) == "外壳") { //整个外壳、相同材质的车门外壳等
+            object.material = new THREE.MeshPhysicalMaterial({
+              color: object.material.color, //默认颜色
+              // color: 0x6a030a,//红色
+              // color: 0x222222,//灰色
+              // color: 0x000000,//黑色
+              // color: 0xffffff,//银白色
+              clearcoat: 1,
+              clearcoatRoughness: 0.01,
+              metalness: 0.9,
+              roughness: 0.3,
+              envMapIntensity: 2.5,
+            })
+          } else if (object.name.slice(0, 2) == "玻璃") {
+            object.material = new THREE.MeshPhysicalMaterial({
+              color: 0x000000,
+              metalness: 0,
+              roughness: 0,
+              transparent: true,
+              transmission: 0.9, // 增加透明度
+              opacity: 0.5, // 添加opacity属性                  
+              envMapIntensity: 2.5,
+            })
+          } else if (object.name.slice(0, 3) == "后视镜") {
+            object.material = new THREE.MeshStandardMaterial({
+              color: 0xffffff, //白色
+              metalness: 1.0,
+              roughness: 0.0,
+              //   envMapIntensity控制环境贴图的影响
+              envMapIntensity: 1.0,
+            })
+          } else if (object.name.slice(0, 2) == "轮胎") {
+            object.material.color.set(0x000000);
+            object.material.normalMap = normalMap;
+            object.material.normalScale.set(2, 2); //加强法线贴图凹凸效果
+            object.material.metalness = 0.0;
+            object.material.roughness = 0.6;
+          } else if (object.name.slice(0, 3) == "前灯罩") {
+            object.material = new THREE.MeshPhysicalMaterial({
+              color: 0xffffff,
+              metalness: 0,
+              roughness: 0,
+              envMapIntensity: 1.0,
+              transmission: 0.9,
+              transparent: true,
+              envMapIntensity: 2.5,
+            })
+          } else if (object.name.slice(0, 4) == "尾灯灯罩") {
+            object.material = new THREE.MeshPhysicalMaterial({
+              color: 0xff0000,
+              metalness: 0,
+              roughness: 0,
+              transmission: 0.5,
+              transparent: true,
+              envMapIntensity: 2.5,
+            })
+          } else if (object.name.slice(0, 5) == "尾灯第二层") {
+            object.material = new THREE.MeshPhysicalMaterial({
+              color: 0x440000,
+              metalness: 0,
+              roughness: 0,
+              transmission: 0.5,
+              transparent: true,
+            })
+          } else if (object.name.slice(0, 4) == "尾灯发光") {
+            object.material = new THREE.MeshLambertMaterial({
+              color: 0x660000,
+            })
+          } else if (object.name.slice(0, 5) == "尾灯第三层") {
+            object.material = new THREE.MeshLambertMaterial({
+              color: 0x19190000,
+            })
+          } else if (object.name.slice(0, 2) == "塑料") {
+            object.material = new THREE.MeshPhysicalMaterial({
+              color: 0x010101,
+              metalness: 0.0,
+              roughness: 0.8,
+              envMapIntensity: 1.0,
+            })
+          }
+
+          baseScene.scene.getObjectByName('天窗黑玻璃').material = new THREE.MeshPhysicalMaterial({
+            color: 0x00000,
+            metalness: 0,
+            roughness: 0,
+            envMapIntensity: 1.0,
+            transmission: 0.2, // .transmission属性用于设置玻璃材质
+            transparent: true
+          })
+          baseScene.scene.getObjectByName('车座').material = new THREE.MeshPhysicalMaterial({
+            color: 0x020202,
+            metalness: 0.1, // 略微增加金属感
+            roughness: 0.8, // 增加粗糙度
+            envMapIntensity: 1.5, // 略微增加环境贴图强度
+          })
+          object.material.envMap = textureCube;
+
+          //确保透明对象在不透明对象之后渲染：
+          if (object.material.transparent) {
+            object.renderOrder = 1;
+          } else {
+            object.renderOrder = 0;
+          }
+        }
+
+      });
+
+      const plane = CreatePlane();
+      baseScene.scene.add(plane)
+
+      const tunnel = createTunnel()
+      baseScene.scene.add(tunnel)
+
+
+      const tagNameArr = ['右前光标', '左前光标', '右后光标', '左后光标', '后备箱光标']
+      const tagArr = []
+      tagNameArr.forEach(name => {
+        const target = baseScene.scene.getObjectByName(name)
+        const sprite = CreatePointsTag(target)
+        tagArr.push(sprite)
+        target.add(sprite)
+        if (name == "右前光标" || name == "右后光标") {
+          sprite.position.z -= sprite.scale.x / 2;
+        } else if (name == "左前光标" || name == "左后光标") {
+          sprite.position.z += sprite.scale.x / 2;
+        } else if (name == "后备箱光标") {
+          sprite.position.x += sprite.scale.x / 2;
+        }
+      })
+
+      // 设置标注精灵Sprite波动，提示用户点击
+      var s = 0.0;
+      var scale = 30; //原来缩放倍数大小
+      function waveAnimation() { //设置产品模型旋转动画        
+        s += 0.01;
+        tagArr.forEach(function (sprite) {
+          if (s < 0.5) {
+            sprite.scale.x = scale * (1 + s);
+            sprite.scale.y = scale * (1 + s);
+          } else if (s >= 0.5 && s < 1.0) {
+            sprite.scale.x = scale * (2 - s);
+            sprite.scale.y = scale * (2 - s);
+          } else {
+            s = 0.0;
+          }
+        })
+        requestAnimationFrame(waveAnimation); //请求再次执行函数waveAnimation
+      }
+      waveAnimation();
+
+      baseScene.controls.maxPolarAngle = Math.PI / 2.01;
+      baseScene.controls.minDistance = 200;
+      baseScene.controls.maxDistance = 2500;
+      open(baseScene.scene)
+      AddMouseEventer()
+    });
+
+
+
+
+    function AddMouseEventer() {
+      mouseInteraction.setOnClickCallback((object) => {
+        if (object) {
+          var chooseDoor = object.door;
+          if (chooseDoor?.state == 'close') {
+            chooseDoor.state = 'open';
+            chooseDoor.openTween.start();//播放开门动画                
+          } else if (chooseDoor?.state == 'open') {
+            chooseDoor.state = 'close';
+            chooseDoor.closeTween.start();//播放关门动画
+          }
+        }
+      });
+
+      mouseInteraction.setOnDblClickCallback((object) => {
+        if (object) {
+          console.log('Double-clicked object:', object);
+
+        }
+      });
+
+      mouseInteraction.setOnHoverCallback((object) => {
+        if (object) {
+          // console.log('Hovering over object:', object.name);
+          // 在这里可以添加悬停在对象上时的操作
+        }
+      });
+
+    }
+
+    function CircleLine() {
+      const geometry = new THREE.BufferGeometry()
+      const R = 60
+      const arc = new THREE.ArcCurve(0, 0, R, Math.PI / 2 + Math.PI / 6, Math.PI / 2 - Math.PI / 6)
+      const points = arc.getPoints(100)
+      geometry.setFromPoints(points)
+      const material = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.5
+      })
+      const line = new THREE.Line(geometry, material)
+      line.rotateX(Math.PI / 2)
+      const circleLine = new THREE.Group()
+      circleLine.position.y -= 80
+      circleLine.add(line)
+
+      const fontLoader = new FontLoader()
+      fontLoader.load('https://cdn.jsdelivr.net/npm/three@0.132.2/examples/fonts/helvetiker_bold.typeface.json', (font) => {
+        const material = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          side: THREE.DoubleSide
+        })
+        const Shapes = font.generateShapes('720°', 10)
+        const geometry = new THREE.ShapeGeometry(Shapes)
+        const text = new THREE.Mesh(geometry, material)
+        text.position.z = R
+        text.position.x = -12;
+        circleLine.add(text)
+      })
+
+      return circleLine
+    }
+
+    function CreatePointsTag(obj) {
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: new THREE.TextureLoader().load('./assets/光点.png'),
+        transparent: true
+      })
+      const sprite = new THREE.Sprite(spriteMaterial)
+      sprite.scale.set(30, 30, 1)
+      const pos = new THREE.Vector3()
+      obj.getWorldPosition(pos)
+      // sprite.position.copy(pos)
+      return sprite
+    }
+
+    function CreatePlane() {
+      var geometry = new THREE.PlaneGeometry(6000, 6000); //矩形平面
+      // 加载树纹理贴图
+      var texture = new THREE.TextureLoader().load("./assets/瓷砖.jpg");
+      texture.encoding = THREE.sRGBEncoding; //设置纹理贴图编码方式和WebGL渲染器一致 要不然色差
+      // 设置阵列
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      // uv两个方向纹理重复数量
+      texture.repeat.set(12, 12); //注意选择合适的阵列数量
+      var material = new THREE.MeshLambertMaterial({
+        color: 0x222222,
+        map: texture,
+      });
+      //   创建地面网格模型；
+      var ground = new THREE.Mesh(geometry, material); //网格模型对象Mesh
+      ground.rotateX(-Math.PI / 2);
+      return ground
+    }
+
+    function createTunnel() {
+      const sphereGroup = new THREE.Group();
+      const R = 550
+      const geometry = new THREE.CylinderGeometry(R * 1.01, R * 1.01, R * 9, 32, 1, true);
+      geometry.openEnded = true;
+      const material = new THREE.MeshPhysicalMaterial({
+        color: 0x222222,
+        side: THREE.BackSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+
+      sphereGroup.add(mesh);
+      sphereGroup.rotateZ(Math.PI / 2)
+      // 隧道圆柱面上设置一些装饰圆点
+      var sphereGeo = new THREE.CylinderGeometry(R, R, R * 8, 32, 50, true);
+      var pos = sphereGeo.attributes.position;
+      var cirGeo = new THREE.CircleGeometry(8, 15, 15);
+      for (let i = 0; i < pos.count; i++) {
+        var cirMaterial = new THREE.MeshLambertMaterial({
+          color: 0xaaaa66,
+          side: THREE.BackSide,
+        }); //材质对象Material
+        cirMaterial.color.r = Math.random() * 0.7 + 0.3;
+        cirMaterial.color.g = cirMaterial.color.r;
+        cirMaterial.color.b = cirMaterial.color.r;
+        var x = pos.getX(i);
+        var y = pos.getY(i);
+        var z = pos.getZ(i);
+        let V1 = new THREE.Vector3(0, 0, 1); //垂直屏幕的方向  z轴方向
+        let V2 = new THREE.Vector3(x, 0, z).normalize(); //圆柱y设置为0
+        let q = new THREE.Quaternion();
+        q.setFromUnitVectors(V1, V2);
+        let M = new THREE.Matrix4();
+        M.makeRotationFromQuaternion(q);
+        var planeMesh = new THREE.Mesh(cirGeo, cirMaterial); //网格模型对象Mesh
+        planeMesh.applyMatrix4(M)
+        planeMesh.position.set(x, y, z);
+        sphereGroup.add(planeMesh);
+      }
+
+      sphereGroup.position.y = -10;
+      return sphereGroup;
+    }
+
+
+    // 创建一个监听者
+    var listener = new THREE.AudioListener();
+    // 创建一个非位置音频对象  用来控制播放
+    var openSound = new THREE.Audio(listener);//开门音频对象
+    var closeSound = new THREE.Audio(listener);//关门音频对象
+    // 创建一个音频加载器对象
+    var audioLoader = new THREE.AudioLoader();
+    audioLoader.load('./assets/open.wav', function (buffer) {
+      openSound.setBuffer(buffer);
+      openSound.setVolume(0.4);//播放音量
+    });
+    audioLoader.load('./assets/close.wav', function (buffer) {
+      closeSound.setBuffer(buffer);
+      closeSound.setVolume(1.0);
+    });
+
+    function open(carModel) {
+      var tagNameArr = ['右前光标', '右后光标', '左前光标', '左后光标', '后备箱光标'];
+      var doorNameArr = ['右前门', '右后门', '左前门', '左后门', '后备箱'];
+      var chooseArr = [];
+      tagNameArr.forEach(function (name, i) {
+        var tagObj = carModel.getObjectByName(name).children[0];
+        chooseArr.push(tagObj);
+        // 自定义光标door属性，绑定光标对应的车门
+        tagObj.door = carModel.getObjectByName(doorNameArr[i]);
+        tagObj.door.state = 'close'; //车门状态
+
+        //选中车门的名字
+        var door = tagObj.door;
+        var name = tagObj.door.name;
+        if (name == "右前门" || name == "右后门") {
+          door.openTween = openClose('y', 0, Math.PI / 3, door);
+          door.closeTween = openClose('y', Math.PI / 3, 0, door);
+        } else if (name == "左前门" || name == "左后门") {
+          door.openTween = openClose('y', 0, -Math.PI / 3, door);
+          door.closeTween = openClose('y', -Math.PI / 3, 0, door);
+        } else if (name == "后备箱") {
+          door.openTween = openClose('z', 0, Math.PI / 3, door);
+          door.closeTween = openClose('z', Math.PI / 3, 0, door);
+        }
+      })
+
+    }
+
+    // 创建模型对象旋转动画
+    function openClose(axis, angle1, angle2, door) {
+      var state = {
+        angle: angle1, // 车门动画开始角度
+      };
+      var tween = new TWEEN.Tween(state); //创建一段tween动画      
+      tween.to({
+        angle: angle2, // 车门动画结束角度
+      }, 1000); //1000：表示动画执行时间1000毫秒(ms)
+      tween.onUpdate(function () {
+        // tween动画执行期间.onUpdate()重复执行，更新车门角度
+        if (axis == 'y') {
+          door.rotation.y = state.angle;
+        } else {
+          door.rotation.z = state.angle;
+        }
+      });
+      if (openClose == 'open') {
+        tween.onStart(function () {
+          openSound.play();//开门声音在开门动画开始的时候发生
+        })
+      } else {
+        tween.onComplete(function () {
+          closeSound.play();//关门声音在关门动画结束的时候发生
+        })
+      }
+      return tween;
+    }
+
+
+    //设置颜色变换
+    function setColor(color) {
+      baseScene.scene.traverse(function (object) {
+        if (object.type === 'Mesh') {
+          if (object.name.slice(0, 2) == "外壳") { //外壳颜色设置
+            object.material.color.set(color);
+          }
+        }
+      })
+    }
+
+    var colorArr = [0x023911, 0x222222, 0x6a030a, 0x000000, 0xffffff];
+    colorArr.forEach(function (value, i) {
+      var dom = document.getElementById('color' + (i + 1));
+      // 单击按钮切换颜色
+      dom.onclick = function () {
+        setColor(value)
+      }
+    })
+
+    baseScene.render();
+  </script>
+</body>
+
+</html>
