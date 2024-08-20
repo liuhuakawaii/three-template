@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <canvas id="webgl" width="500" height="500" style="background: #000;"></canvas>
+  <script>
+    const canvas = document.getElementById('webgl')
+    const gl = canvas.getContext('webgl')
+    //顶点着色器
+    const vertexShaderSource = `
+      attribute vec4 apos;
+      void main() {
+        gl_PointSize = 20.0;
+        gl_Position = apos;
+      }
+    `
+    //片元着色器
+    const fragmentShaderSource = `
+      void main() {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+      }
+    `
+    const program = initShader(gl, vertexShaderSource, fragmentShaderSource)
+    const aposLocation = gl.getAttribLocation(program, 'apos'); //获取顶点着色器的位置变量apos，即aposLocation指向apos变量。
+    const data = new Float32Array([0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5]); //类型数组构造函数Float32Array创建顶点数组
+    const buffer = gl.createBuffer();//创建缓冲区对象
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);//绑定缓冲区对象,激活buffer
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);//顶点数组data数据传入缓冲区
+    gl.vertexAttribPointer(aposLocation, 2, gl.FLOAT, false, 0, 0); //缓冲区中的数据按照一定的规律传递给位置变量apos
+    gl.enableVertexAttribArray(aposLocation); //允许数据传递
+    gl.drawArrays(gl.LINE_LOOP, 0, 4)//绘制矩形
+
+    function initShader(gl, vertexShaderSource, fragmentShaderSource) {
+      const vertexShader = gl.createShader(gl.VERTEX_SHADER)//创建顶点着色器对象
+      gl.shaderSource(vertexShader, vertexShaderSource)//设置着色器代码
+      const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)//创建片元着色器对象
+      gl.shaderSource(fragmentShader, fragmentShaderSource)//设置着色器代码
+      gl.compileShader(vertexShader)//编译着色器
+      gl.compileShader(fragmentShader)//编译着色器
+      const program = gl.createProgram()//创建程序对象
+      gl.attachShader(program, vertexShader)//将着色器附加到程序对象上
+      gl.attachShader(program, fragmentShader)//将着色器附加到程序对象上
+      gl.linkProgram(program)//链接程序对象
+      gl.useProgram(program)//使用程序对象
+      return program
+    }
+  </script>
+</body>
+
+</html>
